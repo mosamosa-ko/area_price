@@ -40,7 +40,7 @@ Open `http://127.0.0.1:8000`.
 
 This project is prepared for Vercel deployment.
 
-- Entry point: `index.py`
+- Entry point: `app.py`
 - Static assets: `public/static/`
 - Config: `vercel.json`
 
