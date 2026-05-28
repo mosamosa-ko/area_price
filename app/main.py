@@ -15,7 +15,7 @@ app = FastAPI(
     title="Area Price Finder",
     description="住所または緯度経度から周辺の地価情報を取得するMVP",
 )
-app.mount("/static", StaticFiles(directory=BASE_DIR / "public" / "static"), name="static")
+app.mount("/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "app" / "templates"))
 
 
