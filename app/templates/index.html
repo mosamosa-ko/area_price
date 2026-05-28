@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Area Price Finder</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <article class="panel hero-copy">
+          <span class="eyebrow">Land Price MVP</span>
+          <h1>住所から、<br />地価の輪郭を掴む。</h1>
+          <p class="lead">
+            国土交通省の地価公示・地価調査データとジオコーディングをつなぎ、住所または緯度経度から周辺の価格帯を即座に確認するMVPです。
+          </p>
+          <div class="hero-metrics">
+            <div class="metric">
+              <span>入力</span>
+              <strong>住所 / 座標</strong>
+            </div>
+            <div class="metric">
+              <span>出力</span>
+              <strong>周辺地価</strong>
+            </div>
+            <div class="metric">
+              <span>集計</span>
+              <strong>平均 / 推移</strong>
+            </div>
+          </div>
+        </article>
+        <aside class="panel hero-card">
+          <div>
+            <span class="eyebrow">Data Sources</span>
+            <h2>公的データ前提の設計</h2>
+            <p>
+              MVPは無料の公的データで成立させ、あとで民間APIへ差し替えやすいようにサービス層を分離しています。
+            </p>
+          </div>
+          <div class="stack">
+            <span>FastAPI</span>
+            <span>Nominatim</span>
+            <span>MLIT XPT002</span>
+          </div>
+        </aside>
+      </section>
+
+      <section class="workspace">
+        <section class="panel form-panel">
+          <h2>検索条件</h2>
+          <p class="helper">
+            `MLIT_API_KEY` が設定されていれば実データを取得します。住所入力時は日本国内向けにジオコーディングします。
+          </p>
+          <p class="helper">
+            APIキー未設定時はデモデータで画面確認できます。
+          </p>
+
+          <div class="tabs">
+            <button type="button" data-mode="address">住所で検索</button>
+            <button type="button" data-mode="coordinates">座標で検索</button>
+          </div>
+
+          <form id="searchForm">
+            <div data-panel="address">
+              <label class="field">
+                <span>住所</span>
+                <input
+                  id="address"
+                  name="address"
+                  type="text"
+                  placeholder="例: 東京都渋谷区渋谷"
+                />
+              </label>
+            </div>
+
+            <div data-panel="coordinates" hidden>
+              <div class="inline-fields">
+                <label class="field">
+                  <span>緯度</span>
+                  <input
+                    id="latitude"
+                    name="latitude"
+                    type="number"
+                    step="any"
+                    placeholder="35.6580"
+                  />
+                </label>
+                <label class="field">
+                  <span>経度</span>
+                  <input
+                    id="longitude"
+                    name="longitude"
+                    type="number"
+                    step="any"
+                    placeholder="139.7016"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <label class="field">
+              <span>検索半径（m）</span>
+              <input id="radius" name="radius" type="number" value="1200" min="300" max="5000" />
+            </label>
+
+            <button class="submit" type="submit">周辺価格を取得</button>
+          </form>
+
+          <p id="status" class="status">
+            住所または座標を入力して検索してください。
+          </p>
+        </section>
+
+        <section class="panel result-panel">
+          <div id="empty" class="empty">
+            ここに最寄り地点、平均価格、周辺価格一覧、年別の平均推移を表示します。
+          </div>
+
+          <div id="results" hidden>
+            <h2 id="addressLabel"></h2>
+            <p class="helper">
+              <span id="yearLabel"></span>
+              <span> / </span>
+              <span id="sourceLabel"></span>
+            </p>
+            <p id="noticeBanner" class="status" hidden></p>
+
+            <div class="summary">
+              <div class="summary-card">
+                <span>平均価格</span>
+                <strong id="avgPrice"></strong>
+              </div>
+              <div class="summary-card">
+                <span>最寄り価格</span>
+                <strong id="nearestPrice"></strong>
+              </div>
+              <div class="summary-card">
+                <span>最寄り地点</span>
+                <strong id="nearestPoint"></strong>
+              </div>
+              <div class="summary-card">
+                <span>最寄り駅</span>
+                <strong id="stationLabel"></strong>
+              </div>
+              <div class="summary-card">
+                <span>距離</span>
+                <strong id="distanceLabel"></strong>
+              </div>
+            </div>
+
+            <section class="list">
+              <h3>周辺価格一覧</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>地点</th>
+                    <th>価格</th>
+                    <th>距離</th>
+                    <th>最寄り駅</th>
+                    <th>用途</th>
+                    <th>住所</th>
+                  </tr>
+                </thead>
+                <tbody id="sampleBody"></tbody>
+              </table>
+            </section>
+
+            <section class="trend">
+              <h3>価格推移</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>年</th>
+                    <th>平均価格</th>
+                    <th>サンプル数</th>
+                  </tr>
+                </thead>
+                <tbody id="trendBody"></tbody>
+              </table>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
