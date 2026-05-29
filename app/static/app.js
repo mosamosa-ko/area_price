@@ -4,8 +4,12 @@ const state = {
 
 const formatter = new Intl.NumberFormat("ja-JP");
 
+function getElement(id) {
+  return document.getElementById(id);
+}
+
 function setText(id, value) {
-  const element = document.getElementById(id);
+  const element = getElement(id);
   if (!element) {
     return;
   }
@@ -23,7 +27,7 @@ function setMode(mode) {
 }
 
 function renderStatus(message, isError = false) {
-  const status = document.getElementById("status");
+  const status = getElement("status");
   if (!status) {
     return;
   }
@@ -40,8 +44,8 @@ function meters(value) {
 }
 
 function renderResults(data) {
-  const empty = document.getElementById("empty");
-  const results = document.getElementById("results");
+  const empty = getElement("empty");
+  const results = getElement("results");
   if (empty) {
     empty.hidden = true;
   }
@@ -53,7 +57,7 @@ function renderResults(data) {
   setText("nearestPoint", data.nearest_point);
   setText("stationLabel", data.nearest_station ?? "-");
   setText("distanceLabel", meters(data.nearest_distance_meters));
-  const notice = document.getElementById("noticeBanner");
+  const notice = getElement("noticeBanner");
   if (data.notice) {
     if (notice) {
       notice.hidden = false;
@@ -78,7 +82,7 @@ function renderResults(data) {
       `
     )
     .join("");
-  const sampleBody = document.getElementById("sampleBody");
+  const sampleBody = getElement("sampleBody");
   if (sampleBody) {
     sampleBody.innerHTML = sampleRows;
   }
@@ -94,7 +98,7 @@ function renderResults(data) {
       `
     )
     .join("");
-  const trendBody = document.getElementById("trendBody");
+  const trendBody = getElement("trendBody");
   if (trendBody) {
     trendBody.innerHTML = trendRows;
   }
@@ -104,16 +108,22 @@ async function handleSubmit(event) {
   event.preventDefault();
   renderStatus("検索中です...");
 
+  const address = getElement("address");
+  const latitude = getElement("latitude");
+  const longitude = getElement("longitude");
+  const radius = getElement("radius");
+
+  if (!address || !latitude || !longitude || !radius) {
+    renderStatus("画面の読み込みに失敗しました。再読み込みしてください。", true);
+    return;
+  }
+
   const payload = {
     mode: state.mode,
-    address: document.getElementById("address").value || null,
-    latitude: document.getElementById("latitude").value
-      ? Number(document.getElementById("latitude").value)
-      : null,
-    longitude: document.getElementById("longitude").value
-      ? Number(document.getElementById("longitude").value)
-      : null,
-    radius_meters: Number(document.getElementById("radius").value),
+    address: address.value || null,
+    latitude: latitude.value ? Number(latitude.value) : null,
+    longitude: longitude.value ? Number(longitude.value) : null,
+    radius_meters: Number(radius.value),
     sample_limit: 12,
   };
 
@@ -130,9 +140,9 @@ async function handleSubmit(event) {
     renderResults(data);
     renderStatus("最新に取得できた年の地価情報を表示しています。");
   } catch (error) {
-    const results = document.getElementById("results");
-    const empty = document.getElementById("empty");
-    const notice = document.getElementById("noticeBanner");
+    const results = getElement("results");
+    const empty = getElement("empty");
+    const notice = getElement("noticeBanner");
     if (results) {
       results.hidden = true;
     }
@@ -153,5 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
     .forEach((button) =>
       button.addEventListener("click", () => setMode(button.dataset.mode))
     );
-  document.getElementById("searchForm").addEventListener("submit", handleSubmit);
+  const searchForm = getElement("searchForm");
+  if (searchForm) {
+    searchForm.addEventListener("submit", handleSubmit);
+  }
 });
