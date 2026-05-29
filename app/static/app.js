@@ -32,7 +32,6 @@ function renderResults(data) {
   document.getElementById("empty").hidden = true;
   document.getElementById("results").hidden = false;
   document.getElementById("addressLabel").textContent = data.address;
-  document.getElementById("yearLabel").textContent = `${data.year}年データ`;
   document.getElementById("avgPrice").textContent = yen(data.average_price);
   document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
   document.getElementById("nearestPoint").textContent = data.nearest_point;
@@ -41,7 +40,6 @@ function renderResults(data) {
   document.getElementById("distanceLabel").textContent = meters(
     data.nearest_distance_meters
   );
-  document.getElementById("sourceLabel").textContent = data.source;
   const notice = document.getElementById("noticeBanner");
   if (data.notice) {
     notice.hidden = false;
