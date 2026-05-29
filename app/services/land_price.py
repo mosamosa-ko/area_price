@@ -15,7 +15,7 @@ from app.utils.config import settings
 
 class LandPriceService:
     xpt002_url = "https://www.reinfolib.mlit.go.jp/ex-api/external/XPT002"
-    _year_points_cache: dict[tuple[int, int, int], list[dict[str, Any]]] = {}
+    _year_points_cache: dict[tuple[int, int, int, bool], list[dict[str, Any]]] = {}
 
     async def search(self, payload: SearchRequest) -> SearchResponse:
         location = await self._resolve_location(payload)
@@ -27,9 +27,15 @@ class LandPriceService:
             latest_year, latest_points = await self._fetch_latest_year_points(
                 location["latitude"], location["longitude"], years
             )
-            trend_years = [year for year in range(latest_year, latest_year - 3, -1) if year > 0]
+            trend_years = [
+                year for year in range(latest_year, latest_year - 3, -1) if year > 0
+            ]
             yearly_points = await self._fetch_selected_years(
-                location["latitude"], location["longitude"], trend_years, seed={latest_year: latest_points}
+                location["latitude"],
+                location["longitude"],
+                trend_years,
+                seed={latest_year: latest_points},
+                expand=False,
             )
         elif settings.demo_mode:
             years = self._candidate_years()
@@ -91,7 +97,7 @@ class LandPriceService:
 
     def _candidate_years(self) -> list[int]:
         current_year = date.today().year
-        return [current_year - offset for offset in range(0, 4)]
+        return [current_year - offset for offset in range(0, 3)]
 
     async def _fetch_selected_years(
         self,
@@ -99,13 +105,17 @@ class LandPriceService:
         longitude: float,
         years: list[int],
         seed: dict[int, list[dict[str, Any]]] | None = None,
+        expand: bool = True,
     ) -> dict[int, list[dict[str, Any]]]:
         yearly_points = dict(seed or {})
         missing_years = [year for year in years if year not in yearly_points]
         if not missing_years:
             return yearly_points
 
-        tasks = [self._fetch_year_points(latitude, longitude, year) for year in missing_years]
+        tasks = [
+            self._fetch_year_points(latitude, longitude, year, expand=expand)
+            for year in missing_years
+        ]
         results = await asyncio.gather(*tasks)
         for year, points in zip(missing_years, results, strict=True):
             yearly_points[year] = points
@@ -115,23 +125,23 @@ class LandPriceService:
         self, latitude: float, longitude: float, years: list[int]
     ) -> tuple[int, list[dict[str, Any]]]:
         for year in sorted(years, reverse=True):
-            points = await self._fetch_year_points(latitude, longitude, year)
+            points = await self._fetch_year_points(latitude, longitude, year, expand=True)
             if points:
                 return year, points
         raise RuntimeError("対象年の地価データを取得できませんでした。")
 
     async def _fetch_year_points(
-        self, latitude: float, longitude: float, year: int
+        self, latitude: float, longitude: float, year: int, expand: bool = True
     ) -> list[dict[str, Any]]:
-        cache_key = self._cache_key(latitude, longitude, year)
+        cache_key = self._cache_key(latitude, longitude, year, expand)
         cached = self._year_points_cache.get(cache_key)
         if cached is not None:
             return cached
 
         headers = {"Ocp-Apim-Subscription-Key": settings.mlit_api_key}
-        async with httpx.AsyncClient(timeout=8.0, headers=headers) as client:
+        async with httpx.AsyncClient(timeout=5.0, headers=headers) as client:
             responses = []
-            for tile_group in self._tile_groups(latitude, longitude, 15):
+            for tile_group in self._tile_groups(latitude, longitude, 15, expand):
                 tasks = []
                 for x, y in tile_group:
                     params = {
@@ -148,12 +158,16 @@ class LandPriceService:
                     group_responses, latitude, longitude, year
                 )
                 if points:
-                    self._year_points_cache[cache_key] = points
-                    return points
+                    ranked = self._nearest_points(
+                        points, latitude, longitude, min(5, len(points))
+                    )
+                    self._year_points_cache[cache_key] = ranked
+                    return ranked
 
         points = self._parse_points_from_responses(responses, latitude, longitude, year)
-        self._year_points_cache[cache_key] = points
-        return points
+        ranked = self._nearest_points(points, latitude, longitude, min(5, len(points)))
+        self._year_points_cache[cache_key] = ranked
+        return ranked
 
     def _parse_points_from_responses(
         self,
@@ -254,20 +268,23 @@ class LandPriceService:
             )
         return trend
 
-    def _cache_key(self, latitude: float, longitude: float, year: int) -> tuple[int, int, int]:
-        return (round(latitude, 3), round(longitude, 3), year)
+    def _cache_key(
+        self, latitude: float, longitude: float, year: int, expand: bool
+    ) -> tuple[int, int, int, bool]:
+        return (round(latitude, 3), round(longitude, 3), year, expand)
 
     def _neighbor_tiles(self, latitude: float, longitude: float, zoom: int) -> list[tuple[int, int]]:
         x, y = self._latlon_to_tile(latitude, longitude, zoom)
         return [(x + dx, y + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
 
-    def _tile_groups(self, latitude: float, longitude: float, zoom: int) -> list[list[tuple[int, int]]]:
+    def _tile_groups(
+        self, latitude: float, longitude: float, zoom: int, expand: bool
+    ) -> list[list[tuple[int, int]]]:
         x, y = self._latlon_to_tile(latitude, longitude, zoom)
-        return [
-            [(x, y)],
-            [(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)],
-            [(x - 1, y - 1), (x - 1, y + 1), (x + 1, y - 1), (x + 1, y + 1)],
-        ]
+        groups = [[(x, y)]]
+        if expand:
+            groups.append([(x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)])
+        return groups
 
     def _latlon_to_tile(self, latitude: float, longitude: float, zoom: int) -> tuple[int, int]:
         lat_rad = math.radians(latitude)

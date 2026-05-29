@@ -3,8 +3,6 @@ const state = {
 };
 
 const formatter = new Intl.NumberFormat("ja-JP");
-let map;
-let mapLayers = [];
 
 function setMode(mode) {
   state.mode = mode;
@@ -28,72 +26,6 @@ function yen(value) {
 
 function meters(value) {
   return `${formatter.format(Math.round(value))}m`;
-}
-
-function ensureMap() {
-  if (map) {
-    return map;
-  }
-  map = L.map("resultMap", {
-    zoomControl: true,
-    scrollWheelZoom: false,
-  });
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors",
-  }).addTo(map);
-  return map;
-}
-
-function clearMapLayers() {
-  mapLayers.forEach((layer) => layer.remove());
-  mapLayers = [];
-}
-
-function renderMap(data) {
-  const mapInstance = ensureMap();
-  clearMapLayers();
-
-  const origin = L.marker([data.latitude, data.longitude], {
-    title: "検索地点",
-  }).bindPopup("検索地点");
-
-  const nearestSample = data.samples[0];
-  const nearest = L.marker([nearestSample.latitude, nearestSample.longitude], {
-    title: nearestSample.point_name,
-  }).bindPopup(
-    `${nearestSample.point_name}<br>${yen(nearestSample.price)}<br>${meters(
-      nearestSample.distance_meters
-    )}`
-  );
-
-  const line = L.polyline(
-    [
-      [data.latitude, data.longitude],
-      [nearestSample.latitude, nearestSample.longitude],
-    ],
-    { color: "#1f2328", weight: 2 }
-  );
-
-  const sampleMarkers = data.samples.slice(1, 6).map((item) =>
-    L.circleMarker([item.latitude, item.longitude], {
-      radius: 5,
-      color: "#4b5563",
-      weight: 1,
-      fillColor: "#ffffff",
-      fillOpacity: 1,
-    }).bindPopup(`${item.point_name}<br>${yen(item.price)}`)
-  );
-
-  mapLayers = [origin, nearest, line, ...sampleMarkers];
-  mapLayers.forEach((layer) => layer.addTo(mapInstance));
-
-  const bounds = L.latLngBounds([
-    [data.latitude, data.longitude],
-    [nearestSample.latitude, nearestSample.longitude],
-    ...data.samples.slice(1, 6).map((item) => [item.latitude, item.longitude]),
-  ]);
-  mapInstance.fitBounds(bounds.pad(0.2));
-  setTimeout(() => mapInstance.invalidateSize(), 0);
 }
 
 function renderTrendChart(trend) {
@@ -199,7 +131,6 @@ function renderResults(data) {
     .join("");
   document.getElementById("trendBody").innerHTML = trendRows;
   renderTrendChart(data.trend);
-  renderMap(data);
 }
 
 async function handleSubmit(event) {
@@ -208,6 +139,8 @@ async function handleSubmit(event) {
   const slowNotice = window.setTimeout(() => {
     renderStatus("検索に時間がかかっています...");
   }, 4000);
+  const controller = new AbortController();
+  const abortTimer = window.setTimeout(() => controller.abort(), 12000);
 
   const payload = {
     mode: state.mode,
@@ -218,7 +151,7 @@ async function handleSubmit(event) {
     longitude: document.getElementById("longitude").value
       ? Number(document.getElementById("longitude").value)
       : null,
-    sample_limit: 8,
+    sample_limit: 5,
   };
 
   try {
@@ -226,19 +159,27 @@ async function handleSubmit(event) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
     const data = await response.json();
     if (!response.ok) {
       throw new Error(data.detail || "検索に失敗しました。");
     }
     window.clearTimeout(slowNotice);
+    window.clearTimeout(abortTimer);
     renderResults(data);
     renderStatus("最新に取得できた年の地価情報を表示しています。");
   } catch (error) {
     window.clearTimeout(slowNotice);
+    window.clearTimeout(abortTimer);
     document.getElementById("results").hidden = true;
     document.getElementById("empty").hidden = false;
-    renderStatus(error.message, true);
+    renderStatus(
+      error.name === "AbortError"
+        ? "検索がタイムアウトしました。条件を変えて再試行してください。"
+        : error.message,
+      true
+    );
   }
 }
 
