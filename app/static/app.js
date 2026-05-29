@@ -92,6 +92,7 @@ async function handleSubmit(event) {
     longitude: document.getElementById("longitude").value
       ? Number(document.getElementById("longitude").value)
       : null,
+    radius_meters: 1200,
     sample_limit: 12,
   };
 
