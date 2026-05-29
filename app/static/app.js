@@ -3,6 +3,7 @@ const state = {
 };
 
 const formatter = new Intl.NumberFormat("ja-JP");
+const TSUBO_PER_SQUARE_METER = 3.30579;
 
 function setMode(mode) {
   state.mode = mode;
@@ -24,6 +25,11 @@ function yen(value) {
   return `¥${formatter.format(value)}`;
 }
 
+function priceLabel(value) {
+  const perTsubo = Math.round(value * TSUBO_PER_SQUARE_METER);
+  return `${yen(value)} /㎡<br><small>約 ${yen(perTsubo)} /坪</small>`;
+}
+
 function meters(value) {
   return `${formatter.format(Math.round(value))}m`;
 }
@@ -33,8 +39,10 @@ function renderResults(data) {
   document.getElementById("results").hidden = false;
   document.getElementById("addressLabel").textContent = data.address;
   document.getElementById("yearLabel").textContent = `${data.year}年データ`;
-  document.getElementById("avgPrice").textContent = yen(data.average_price);
-  document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
+  document.getElementById("avgPrice").innerHTML = priceLabel(data.average_price);
+  document.getElementById("nearestPrice").innerHTML = priceLabel(
+    data.nearest_price
+  );
   document.getElementById("nearestPoint").textContent = data.nearest_point;
   document.getElementById("stationLabel").textContent =
     data.nearest_station ?? "-";
@@ -56,7 +64,7 @@ function renderResults(data) {
       (item) => `
         <tr>
           <td>${item.point_name}</td>
-          <td>${yen(item.price)}</td>
+          <td>${priceLabel(item.price)}</td>
           <td>${meters(item.distance_meters)}</td>
           <td>${item.nearest_station ?? "-"}</td>
           <td>${item.use_category ?? "-"}</td>
@@ -72,7 +80,7 @@ function renderResults(data) {
       (item) => `
         <tr>
           <td>${item.year}</td>
-          <td>${yen(item.average_price)}</td>
+          <td>${priceLabel(item.average_price)}</td>
           <td>${item.count}件</td>
         </tr>
       `
