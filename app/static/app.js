@@ -31,7 +31,6 @@ function meters(value) {
 function renderResults(data) {
   document.getElementById("empty").hidden = true;
   document.getElementById("results").hidden = false;
-  document.getElementById("addressLabel").textContent = data.address;
   document.getElementById("avgPrice").textContent = yen(data.average_price);
   document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
   document.getElementById("nearestPoint").textContent = data.nearest_point;
@@ -92,7 +91,7 @@ async function handleSubmit(event) {
     longitude: document.getElementById("longitude").value
       ? Number(document.getElementById("longitude").value)
       : null,
-    radius_meters: 1200,
+    radius_meters: Number(document.getElementById("radius").value),
     sample_limit: 12,
   };
 

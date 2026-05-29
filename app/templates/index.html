@@ -60,6 +60,18 @@
               </div>
             </div>
 
+            <label class="field">
+              <span>検索半径（m）</span>
+              <input
+                id="radius"
+                name="radius"
+                type="number"
+                value="1200"
+                min="300"
+                max="5000"
+              />
+            </label>
+
             <button class="submit" type="submit">周辺価格を取得</button>
           </form>
 
@@ -74,7 +86,6 @@
           </div>
 
           <div id="results" hidden>
-            <h2 id="addressLabel"></h2>
             <p id="noticeBanner" class="status" hidden></p>
 
             <div class="summary">
