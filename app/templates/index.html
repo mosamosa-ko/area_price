@@ -9,41 +9,11 @@
   <body>
     <main class="shell">
       <section class="hero">
-        <article class="panel hero-copy">
-          <span class="eyebrow">Land Price MVP</span>
-          <h1>住所から、<br />地価の輪郭を掴む。</h1>
-          <p class="lead">
-            国土交通省の地価公示・地価調査データとジオコーディングをつなぎ、住所または緯度経度から周辺の価格帯を即座に確認するMVPです。
-          </p>
-          <div class="hero-metrics">
-            <div class="metric">
-              <span>入力</span>
-              <strong>住所 / 座標</strong>
-            </div>
-            <div class="metric">
-              <span>出力</span>
-              <strong>周辺地価</strong>
-            </div>
-            <div class="metric">
-              <span>集計</span>
-              <strong>平均 / 推移</strong>
-            </div>
-          </div>
-        </article>
-        <aside class="panel hero-card">
-          <div>
-            <span class="eyebrow">Data Sources</span>
-            <h2>公的データ前提の設計</h2>
-            <p>
-              MVPは無料の公的データで成立させ、あとで民間APIへ差し替えやすいようにサービス層を分離しています。
-            </p>
-          </div>
-          <div class="stack">
-            <span>FastAPI</span>
-            <span>Nominatim</span>
-            <span>MLIT XPT002</span>
-          </div>
-        </aside>
+        <span class="eyebrow">Land Price</span>
+        <h1>住所から周辺地価を確認</h1>
+        <p class="lead">
+          住所または緯度経度を入力すると、周辺の地価、公示価格の平均、最寄り地点、価格推移を表示します。
+        </p>
       </section>
 
       <section class="workspace">
