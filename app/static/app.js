@@ -4,6 +4,14 @@ const state = {
 
 const formatter = new Intl.NumberFormat("ja-JP");
 
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (!element) {
+    return;
+  }
+  element.textContent = value;
+}
+
 function setMode(mode) {
   state.mode = mode;
   document.querySelectorAll("[data-mode]").forEach((button) => {
@@ -16,6 +24,9 @@ function setMode(mode) {
 
 function renderStatus(message, isError = false) {
   const status = document.getElementById("status");
+  if (!status) {
+    return;
+  }
   status.textContent = message;
   status.classList.toggle("error", isError);
 }
@@ -29,21 +40,26 @@ function meters(value) {
 }
 
 function renderResults(data) {
-  document.getElementById("empty").hidden = true;
-  document.getElementById("results").hidden = false;
-  document.getElementById("avgPrice").textContent = yen(data.average_price);
-  document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
-  document.getElementById("nearestPoint").textContent = data.nearest_point;
-  document.getElementById("stationLabel").textContent =
-    data.nearest_station ?? "-";
-  document.getElementById("distanceLabel").textContent = meters(
-    data.nearest_distance_meters
-  );
+  const empty = document.getElementById("empty");
+  const results = document.getElementById("results");
+  if (empty) {
+    empty.hidden = true;
+  }
+  if (results) {
+    results.hidden = false;
+  }
+  setText("avgPrice", yen(data.average_price));
+  setText("nearestPrice", yen(data.nearest_price));
+  setText("nearestPoint", data.nearest_point);
+  setText("stationLabel", data.nearest_station ?? "-");
+  setText("distanceLabel", meters(data.nearest_distance_meters));
   const notice = document.getElementById("noticeBanner");
   if (data.notice) {
-    notice.hidden = false;
-    notice.textContent = data.notice;
-  } else {
+    if (notice) {
+      notice.hidden = false;
+      notice.textContent = data.notice;
+    }
+  } else if (notice) {
     notice.hidden = true;
     notice.textContent = "";
   }
@@ -62,7 +78,10 @@ function renderResults(data) {
       `
     )
     .join("");
-  document.getElementById("sampleBody").innerHTML = sampleRows;
+  const sampleBody = document.getElementById("sampleBody");
+  if (sampleBody) {
+    sampleBody.innerHTML = sampleRows;
+  }
 
   const trendRows = data.trend
     .map(
@@ -75,7 +94,10 @@ function renderResults(data) {
       `
     )
     .join("");
-  document.getElementById("trendBody").innerHTML = trendRows;
+  const trendBody = document.getElementById("trendBody");
+  if (trendBody) {
+    trendBody.innerHTML = trendRows;
+  }
 }
 
 async function handleSubmit(event) {
@@ -108,9 +130,18 @@ async function handleSubmit(event) {
     renderResults(data);
     renderStatus("最新に取得できた年の地価情報を表示しています。");
   } catch (error) {
-    document.getElementById("results").hidden = true;
-    document.getElementById("empty").hidden = false;
-    document.getElementById("noticeBanner").hidden = true;
+    const results = document.getElementById("results");
+    const empty = document.getElementById("empty");
+    const notice = document.getElementById("noticeBanner");
+    if (results) {
+      results.hidden = true;
+    }
+    if (empty) {
+      empty.hidden = false;
+    }
+    if (notice) {
+      notice.hidden = true;
+    }
     renderStatus(error.message, true);
   }
 }
