@@ -16,6 +16,12 @@
       <section class="workspace">
         <section class="panel form-panel">
           <h2>検索条件</h2>
+          <p class="helper">
+            `MLIT_API_KEY` が設定されていれば実データを取得します。住所入力時は日本国内向けにジオコーディングします。
+          </p>
+          <p class="helper">
+            APIキー未設定時はデモデータで画面確認できます。
+          </p>
 
           <div class="tabs">
             <button type="button" data-mode="address">住所で検索</button>
@@ -60,6 +66,11 @@
               </div>
             </div>
 
+            <label class="field">
+              <span>検索半径（m）</span>
+              <input id="radius" name="radius" type="number" value="1200" min="300" max="5000" />
+            </label>
+
             <button class="submit" type="submit">周辺価格を取得</button>
           </form>
 
@@ -75,6 +86,12 @@
 
           <div id="results" hidden>
             <h2 id="addressLabel"></h2>
+            <p class="helper">
+              <span id="yearLabel"></span>
+              <span> / </span>
+              <span id="sourceLabel"></span>
+            </p>
+            <p id="noticeBanner" class="status" hidden></p>
 
             <div class="summary">
               <div class="summary-card">
@@ -120,7 +137,6 @@
 
             <section class="trend">
               <h3>価格推移</h3>
-              <div id="trendChart" class="chart-card"></div>
               <div class="table-wrap">
                 <table>
                   <thead>

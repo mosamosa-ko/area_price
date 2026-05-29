@@ -39,21 +39,23 @@ class LandPriceService:
             )
 
         latest_year, latest_points = self._select_latest_points(yearly_points)
-        nearest_points = self._nearest_points(
+        nearby_points = self._filter_nearby_points(
             latest_points,
             location["latitude"],
             location["longitude"],
-            payload.sample_limit,
+            payload.radius_meters,
         )
-        if not nearest_points:
-            raise RuntimeError("周辺の地価データが見つかりませんでした。")
+        if not nearby_points:
+            raise RuntimeError("周辺の地価データが見つかりませんでした。検索半径を広げてください。")
 
-        samples = nearest_points[: payload.sample_limit]
+        samples = sorted(nearby_points, key=lambda item: item["distance_meters"])[
+            : payload.sample_limit
+        ]
         trend = self._build_trend(
             yearly_points,
             location["latitude"],
             location["longitude"],
-            payload.sample_limit,
+            payload.radius_meters,
         )
         nearest = samples[0]
         average_price = round(mean(point["price"] for point in samples))
@@ -62,6 +64,7 @@ class LandPriceService:
             address=location["address"],
             latitude=location["latitude"],
             longitude=location["longitude"],
+            radius_meters=payload.radius_meters,
             average_price=average_price,
             nearest_price=nearest["price"],
             nearest_point=nearest["point_name"],
@@ -112,15 +115,6 @@ class LandPriceService:
                 tasks.append(client.get(self.xpt002_url, params=params))
             responses = await asyncio.gather(*tasks, return_exceptions=True)
 
-        return self._parse_points_from_responses(responses, latitude, longitude, year)
-
-    def _parse_points_from_responses(
-        self,
-        responses: list[httpx.Response | Exception],
-        latitude: float,
-        longitude: float,
-        year: int,
-    ) -> list[dict[str, Any]]:
         points: list[dict[str, Any]] = []
         seen_ids: set[int] = set()
         for response in responses:
@@ -169,14 +163,14 @@ class LandPriceService:
                 return year, yearly_points[year]
         raise RuntimeError("対象年の地価データを取得できませんでした。")
 
-    def _nearest_points(
+    def _filter_nearby_points(
         self,
         points: list[dict[str, Any]],
         latitude: float,
         longitude: float,
-        limit: int,
+        radius_meters: int,
     ) -> list[dict[str, Any]]:
-        ranked = [
+        filtered = [
             {
                 **point,
                 "distance_meters": round(
@@ -187,28 +181,34 @@ class LandPriceService:
                 ),
             }
             for point in points
+            if self._haversine(
+                latitude, longitude, point["latitude"], point["longitude"]
+            )
+            <= radius_meters
         ]
-        return sorted(ranked, key=lambda item: item["distance_meters"])[:limit]
+        if filtered:
+            return filtered
+        return sorted(points, key=lambda item: item["distance_meters"])[:8]
 
     def _build_trend(
         self,
         yearly_points: dict[int, list[dict[str, Any]]],
         latitude: float,
         longitude: float,
-        sample_limit: int,
+        radius_meters: int,
     ) -> list[dict[str, Any]]:
         trend = []
         for year in sorted(yearly_points.keys()):
-            nearest = self._nearest_points(
-                yearly_points[year], latitude, longitude, sample_limit
+            nearby = self._filter_nearby_points(
+                yearly_points[year], latitude, longitude, radius_meters
             )
-            if not nearest:
+            if not nearby:
                 continue
             trend.append(
                 {
                     "year": year,
-                    "average_price": round(mean(point["price"] for point in nearest)),
-                    "count": len(nearest),
+                    "average_price": round(mean(point["price"] for point in nearby)),
+                    "count": len(nearby),
                 }
             )
         return trend

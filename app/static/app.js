@@ -28,71 +28,11 @@ function meters(value) {
   return `${formatter.format(Math.round(value))}m`;
 }
 
-function renderTrendChart(trend) {
-  const root = document.getElementById("trendChart");
-  if (!trend.length) {
-    root.innerHTML = '<p class="chart-empty">推移データがありません。</p>';
-    return;
-  }
-
-  const width = 640;
-  const height = 220;
-  const padX = 40;
-  const padTop = 24;
-  const padBottom = 36;
-  const values = trend.map((item) => item.average_price);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const range = Math.max(max - min, 1);
-  const stepX = trend.length === 1 ? 0 : (width - padX * 2) / (trend.length - 1);
-
-  const points = trend.map((item, index) => {
-    const x = padX + stepX * index;
-    const y =
-      padTop +
-      ((max - item.average_price) / range) * (height - padTop - padBottom);
-    return { x, y, ...item };
-  });
-
-  const path = points
-    .map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${point.y}`)
-    .join(" ");
-
-  const labels = points
-    .map(
-      (point) => `
-        <text x="${point.x}" y="${height - 12}" text-anchor="middle" class="chart-axis-label">
-          ${point.year}
-        </text>
-      `
-    )
-    .join("");
-
-  const dots = points
-    .map(
-      (point) => `
-        <circle cx="${point.x}" cy="${point.y}" r="4" class="chart-dot"></circle>
-        <text x="${point.x}" y="${point.y - 10}" text-anchor="middle" class="chart-value-label">
-          ${formatter.format(point.average_price)}
-        </text>
-      `
-    )
-    .join("");
-
-  root.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" class="chart-svg" role="img" aria-label="価格推移グラフ">
-      <line x1="${padX}" y1="${height - padBottom}" x2="${width - padX}" y2="${height - padBottom}" class="chart-axis"></line>
-      <path d="${path}" class="chart-line"></path>
-      ${dots}
-      ${labels}
-    </svg>
-  `;
-}
-
 function renderResults(data) {
   document.getElementById("empty").hidden = true;
   document.getElementById("results").hidden = false;
   document.getElementById("addressLabel").textContent = data.address;
+  document.getElementById("yearLabel").textContent = `${data.year}年データ`;
   document.getElementById("avgPrice").textContent = yen(data.average_price);
   document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
   document.getElementById("nearestPoint").textContent = data.nearest_point;
@@ -101,6 +41,15 @@ function renderResults(data) {
   document.getElementById("distanceLabel").textContent = meters(
     data.nearest_distance_meters
   );
+  document.getElementById("sourceLabel").textContent = data.source;
+  const notice = document.getElementById("noticeBanner");
+  if (data.notice) {
+    notice.hidden = false;
+    notice.textContent = data.notice;
+  } else {
+    notice.hidden = true;
+    notice.textContent = "";
+  }
 
   const sampleRows = data.samples
     .map(
@@ -130,7 +79,6 @@ function renderResults(data) {
     )
     .join("");
   document.getElementById("trendBody").innerHTML = trendRows;
-  renderTrendChart(data.trend);
 }
 
 async function handleSubmit(event) {
@@ -146,7 +94,8 @@ async function handleSubmit(event) {
     longitude: document.getElementById("longitude").value
       ? Number(document.getElementById("longitude").value)
       : null,
-    sample_limit: 8,
+    radius_meters: Number(document.getElementById("radius").value),
+    sample_limit: 12,
   };
 
   try {
@@ -164,6 +113,7 @@ async function handleSubmit(event) {
   } catch (error) {
     document.getElementById("results").hidden = true;
     document.getElementById("empty").hidden = false;
+    document.getElementById("noticeBanner").hidden = true;
     renderStatus(error.message, true);
   }
 }

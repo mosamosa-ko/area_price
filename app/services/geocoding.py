@@ -10,14 +10,10 @@ from app.utils.config import settings
 
 class GeocodingService:
     base_url = "https://nominatim.openstreetmap.org/search"
-    _cache: dict[str, dict[str, Any]] = {}
 
     async def geocode(self, address: str) -> dict[str, Any]:
         headers = {"User-Agent": settings.nominatim_user_agent}
         normalized = self._normalize_address(address)
-        cached = self._cache.get(normalized)
-        if cached:
-            return cached
         queries = self._build_queries(normalized)
 
         async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
@@ -27,16 +23,11 @@ class GeocodingService:
                 data = response.json()
                 if data:
                     top = data[0]
-                    display_address = self._format_display_address(
-                        top.get("address", {}), normalized
-                    )
-                    result = {
-                        "address": display_address,
+                    return {
+                        "address": top.get("display_name", normalized),
                         "latitude": float(top["lat"]),
                         "longitude": float(top["lon"]),
                     }
-                    self._cache[normalized] = result
-                    return result
 
         raise ValueError("住所から位置を特定できませんでした。住所を少し短くして再検索してください。")
 
@@ -85,20 +76,3 @@ class GeocodingService:
             seen.add(key)
             deduped.append(query)
         return deduped
-
-    def _format_display_address(
-        self, address_data: dict[str, Any], fallback: str
-    ) -> str:
-        parts = [
-            address_data.get("state"),
-            address_data.get("city")
-            or address_data.get("municipality")
-            or address_data.get("county"),
-            address_data.get("suburb")
-            or address_data.get("city_district")
-            or address_data.get("town")
-            or address_data.get("village"),
-            address_data.get("neighbourhood"),
-        ]
-        compact = "".join(part for part in parts if part)
-        return compact or fallback
