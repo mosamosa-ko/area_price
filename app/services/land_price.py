@@ -39,23 +39,21 @@ class LandPriceService:
             )
 
         latest_year, latest_points = self._select_latest_points(yearly_points)
-        nearby_points = self._filter_nearby_points(
+        nearest_points = self._nearest_points(
             latest_points,
             location["latitude"],
             location["longitude"],
-            payload.radius_meters,
+            payload.sample_limit,
         )
-        if not nearby_points:
-            raise RuntimeError("周辺の地価データが見つかりませんでした。検索半径を広げてください。")
+        if not nearest_points:
+            raise RuntimeError("周辺の地価データが見つかりませんでした。")
 
-        samples = sorted(nearby_points, key=lambda item: item["distance_meters"])[
-            : payload.sample_limit
-        ]
+        samples = nearest_points[: payload.sample_limit]
         trend = self._build_trend(
             yearly_points,
             location["latitude"],
             location["longitude"],
-            payload.radius_meters,
+            payload.sample_limit,
         )
         nearest = samples[0]
         average_price = round(mean(point["price"] for point in samples))
@@ -64,7 +62,6 @@ class LandPriceService:
             address=location["address"],
             latitude=location["latitude"],
             longitude=location["longitude"],
-            radius_meters=payload.radius_meters,
             average_price=average_price,
             nearest_price=nearest["price"],
             nearest_point=nearest["point_name"],
@@ -163,14 +160,14 @@ class LandPriceService:
                 return year, yearly_points[year]
         raise RuntimeError("対象年の地価データを取得できませんでした。")
 
-    def _filter_nearby_points(
+    def _nearest_points(
         self,
         points: list[dict[str, Any]],
         latitude: float,
         longitude: float,
-        radius_meters: int,
+        limit: int,
     ) -> list[dict[str, Any]]:
-        filtered = [
+        ranked = [
             {
                 **point,
                 "distance_meters": round(
@@ -181,34 +178,28 @@ class LandPriceService:
                 ),
             }
             for point in points
-            if self._haversine(
-                latitude, longitude, point["latitude"], point["longitude"]
-            )
-            <= radius_meters
         ]
-        if filtered:
-            return filtered
-        return sorted(points, key=lambda item: item["distance_meters"])[:8]
+        return sorted(ranked, key=lambda item: item["distance_meters"])[:limit]
 
     def _build_trend(
         self,
         yearly_points: dict[int, list[dict[str, Any]]],
         latitude: float,
         longitude: float,
-        radius_meters: int,
+        sample_limit: int,
     ) -> list[dict[str, Any]]:
         trend = []
         for year in sorted(yearly_points.keys()):
-            nearby = self._filter_nearby_points(
-                yearly_points[year], latitude, longitude, radius_meters
+            nearest = self._nearest_points(
+                yearly_points[year], latitude, longitude, sample_limit
             )
-            if not nearby:
+            if not nearest:
                 continue
             trend.append(
                 {
                     "year": year,
-                    "average_price": round(mean(point["price"] for point in nearby)),
-                    "count": len(nearby),
+                    "average_price": round(mean(point["price"] for point in nearest)),
+                    "count": len(nearest),
                 }
             )
         return trend

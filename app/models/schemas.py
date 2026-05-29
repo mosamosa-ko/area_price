@@ -10,7 +10,6 @@ class SearchRequest(BaseModel):
     address: str | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
-    radius_meters: int = Field(default=1200, ge=300, le=5000)
     sample_limit: int = Field(default=12, ge=3, le=30)
 
     @model_validator(mode="after")
@@ -46,7 +45,6 @@ class SearchResponse(BaseModel):
     address: str
     latitude: float
     longitude: float
-    radius_meters: int
     average_price: int
     nearest_price: int
     nearest_point: str
