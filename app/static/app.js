@@ -31,7 +31,6 @@ function meters(value) {
 function renderResults(data) {
   document.getElementById("empty").hidden = true;
   document.getElementById("results").hidden = false;
-  document.getElementById("addressLabel").textContent = data.address;
   document.getElementById("avgPrice").textContent = yen(data.average_price);
   document.getElementById("nearestPrice").textContent = yen(data.nearest_price);
   document.getElementById("nearestPoint").textContent = data.nearest_point;
