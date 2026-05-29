@@ -156,8 +156,20 @@ h1 {
 }
 
 .list,
-.trend {
+.trend,
+.map-section {
   margin-top: 24px;
+}
+
+.map-card {
+  height: 320px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.leaflet-container {
+  font-family: "Hiragino Sans", "Yu Gothic", sans-serif;
 }
 
 .chart-card {

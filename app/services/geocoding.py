@@ -23,8 +23,11 @@ class GeocodingService:
                 data = response.json()
                 if data:
                     top = data[0]
+                    display_address = self._format_display_address(
+                        top.get("address", {}), normalized
+                    )
                     return {
-                        "address": top.get("display_name", normalized),
+                        "address": display_address,
                         "latitude": float(top["lat"]),
                         "longitude": float(top["lon"]),
                     }
@@ -76,3 +79,20 @@ class GeocodingService:
             seen.add(key)
             deduped.append(query)
         return deduped
+
+    def _format_display_address(
+        self, address_data: dict[str, Any], fallback: str
+    ) -> str:
+        parts = [
+            address_data.get("state"),
+            address_data.get("city")
+            or address_data.get("municipality")
+            or address_data.get("county"),
+            address_data.get("suburb")
+            or address_data.get("city_district")
+            or address_data.get("town")
+            or address_data.get("village"),
+            address_data.get("neighbourhood"),
+        ]
+        compact = "".join(part for part in parts if part)
+        return compact or fallback
