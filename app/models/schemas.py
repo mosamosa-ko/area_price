@@ -10,7 +10,7 @@ class SearchRequest(BaseModel):
     address: str | None = None
     latitude: float | None = Field(default=None, ge=-90, le=90)
     longitude: float | None = Field(default=None, ge=-180, le=180)
-    sample_limit: int = Field(default=12, ge=3, le=30)
+    sample_limit: int = Field(default=8, ge=3, le=20)
 
     @model_validator(mode="after")
     def validate_input(self) -> "SearchRequest":

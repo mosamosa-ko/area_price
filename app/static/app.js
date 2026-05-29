@@ -205,6 +205,9 @@ function renderResults(data) {
 async function handleSubmit(event) {
   event.preventDefault();
   renderStatus("検索中です...");
+  const slowNotice = window.setTimeout(() => {
+    renderStatus("検索に時間がかかっています...");
+  }, 4000);
 
   const payload = {
     mode: state.mode,
@@ -215,7 +218,7 @@ async function handleSubmit(event) {
     longitude: document.getElementById("longitude").value
       ? Number(document.getElementById("longitude").value)
       : null,
-    sample_limit: 12,
+    sample_limit: 8,
   };
 
   try {
@@ -228,9 +231,11 @@ async function handleSubmit(event) {
     if (!response.ok) {
       throw new Error(data.detail || "検索に失敗しました。");
     }
+    window.clearTimeout(slowNotice);
     renderResults(data);
     renderStatus("最新に取得できた年の地価情報を表示しています。");
   } catch (error) {
+    window.clearTimeout(slowNotice);
     document.getElementById("results").hidden = true;
     document.getElementById("empty").hidden = false;
     renderStatus(error.message, true);
