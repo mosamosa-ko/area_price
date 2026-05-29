@@ -10,10 +10,14 @@ from app.utils.config import settings
 
 class GeocodingService:
     base_url = "https://nominatim.openstreetmap.org/search"
+    _cache: dict[str, dict[str, Any]] = {}
 
     async def geocode(self, address: str) -> dict[str, Any]:
         headers = {"User-Agent": settings.nominatim_user_agent}
         normalized = self._normalize_address(address)
+        cached = self._cache.get(normalized)
+        if cached:
+            return cached
         queries = self._build_queries(normalized)
 
         async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
@@ -26,11 +30,13 @@ class GeocodingService:
                     display_address = self._format_display_address(
                         top.get("address", {}), normalized
                     )
-                    return {
+                    result = {
                         "address": display_address,
                         "latitude": float(top["lat"]),
                         "longitude": float(top["lon"]),
                     }
+                    self._cache[normalized] = result
+                    return result
 
         raise ValueError("住所から位置を特定できませんでした。住所を少し短くして再検索してください。")
 
